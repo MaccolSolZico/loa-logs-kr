@@ -19,7 +19,7 @@
 
 **NOTE:** Please do note that this is a very barebones patch. Most of the meter features are **not** working properly due to missing packet structures. We are working hard to become fully independent of Herysia's meter-core, but this process is extremely difficult and will take a few weeks.
 
-If you missed the news, please read the announcement in the discord channel. [#announcements - ramen shop](https://discord.gg/2rwTTKXRwu).
+If you missed the news, please read the announcement in the discord channel. [#알림 - 로아 미터기 한섭](https://discord.gg/ybujC3sjMy).
 
 ### Current Functionality
 #### Working
@@ -89,4 +89,4 @@ If you missed the news, please read the announcement in the discord channel. [#a
 
 **Older Changelogs**: [link](https://github.com/MaccolSolZico/loa-logs-kr/releases/tag/v1.9.10)
 
-send bug reports/suggestions to [#loa-logs-kr](https://discord.gg/sbSa3pkDF5)
+send bug reports/suggestions to [#loa-logs-kr](https://discord.gg/ybujC3sjMy)
