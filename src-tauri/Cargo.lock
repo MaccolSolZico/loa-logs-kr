@@ -2445,6 +2445,7 @@ name = "meter-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "byteorder",
  "chrono",
  "ffi-opaque",
  "hashbrown 0.14.5",
