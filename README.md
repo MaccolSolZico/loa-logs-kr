@@ -1,28 +1,28 @@
-# <img src="https://i.imgur.com/eej47rS.png" width="30"/> LOA Logs
+# <img src="https://i.imgur.com/eej47rS.png" width="30"/> LOA Logs KR
 
-[![GitHub](https://img.shields.io/github/downloads/snoww/loa-logs/total?style=for-the-badge&color=%23ff9800)](https://github.com/snoww/loa-logs/releases/latest) [![Discord](https://img.shields.io/discord/1174544914139328572?color=%235865F2&label=Discord&style=for-the-badge)](https://discord.gg/RXvTMV2YHu)
+[![GitHub](https://img.shields.io/github/downloads/MaccolSolZico/loa-logs-kr/total?style=for-the-badge&color=%23ff9800)](https://github.com/MaccolSolZico/loa-logs-kr/releases/latest) [![Discord](https://img.shields.io/discord/1174544914139328572?color=%235865F2&label=Discord&style=for-the-badge)](https://discord.gg/RXvTMV2YHu)
 
 
-[![GitHub](https://img.shields.io/github/v/release/snoww/loa-logs?style=flat-square)](https://github.com/snoww/loa-logs/releases)
-[![GitHub](https://img.shields.io/github/license/snoww/loa-logs?style=flat-square)](https://github.com/snoww/loa-logs/blob/master/LICENSE)
+[![GitHub](https://img.shields.io/github/v/release/MaccolSolZico/loa-logs-kr?style=flat-square)](https://github.com/MaccolSolZico/loa-logs-kr/releases)
+[![GitHub](https://img.shields.io/github/license/MaccolSolZico/loa-logs-kr?style=flat-square)](https://github.com/MaccolSolZico/loa-logs-kr/blob/master/LICENSE)
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/synow)
 
 
-LOA Logs is a "blazingly fast" open source Lost Ark DPS meter, written in Rust by [Snow](https://github.com/snoww). 
+LOA Logs KR is a "blazingly fast" open source Lost Ark DPS meter, written in Rust by [Snow](https://github.com/MaccolSolZico). 
 
-This project is an opinionated flavor of [LOA Details](https://github.com/lost-ark-dev/loa-details) by Herysia and Mathi, but should share very similar user interfaces and settings. The packet sniffing and processing has been completely ported over to Rust, with [`meter-core-rs`](https://github.com/snoww/meter-core-rs). The Rust port could not be made without Herysia and Henjuro's work on [`meter-core`](https://github.com/lost-ark-dev/meter-core).
+This project is an opinionated flavor of [LOA Details](https://github.com/lost-ark-dev/loa-details) by Herysia and Mathi, but should share very similar user interfaces and settings. The packet sniffing and processing has been completely ported over to Rust, with [`meter-core-rs-kr`](https://github.com/MaccolSolZico/meter-core-rs-kr). The Rust port could not be made without Herysia and Henjuro's work on [`meter-core`](https://github.com/lost-ark-dev/meter-core).
 
 This project was designed specifically with hell-raiding in mind.
 
 # Download
-https://github.com/snoww/loa-logs/releases
+https://github.com/MaccolSolZico/loa-logs-kr/releases
 
 *currently only Windows 7 and up is supported
 
 > [!IMPORTANT]
 > ### Prerequisites
-> Npcap is required to run LOA Logs.
+> Npcap is required to run LOA Logs KR.
 >
 > Download [here](https://npcap.com/#download).
 
@@ -41,7 +41,7 @@ A: Right-click the taskbar icon (located in the bottom right of your screen, nex
 
 A: There can be multiple reasons. Did you install Npcap? If that still doesn't work, enable raw socket mode by doing the following: *Settings > General > Un-check Auto Network Selection > Raw Socket*. You must restart the meter as admin.
 
-#### Q: How to use ExitLag with LOA Logs?
+#### Q: How to use ExitLag with LOA Logs KR?
 
 A: ExitLag recently updated their settings which changed how they redirect packets. Change your ExitLag settings to *Packet redirection method > Legacy - NDIS*. If that still doesn't work. Turn on raw socket by following the steps above.
 
@@ -79,7 +79,7 @@ A: rDPS is finally implemented as of v1.8.0. Make sure to thank Herysia and Math
 
 #### Q: Help, my issue isn't listed here.
 
-A: Create an issue here on GitHub, or send a message in the #loa-logs channel on Discord. [(invite)](https://discord.gg/sbSa3pkDF5)
+A: Create an issue here on GitHub, or send a message in the #loa-logs-kr channel on Discord. [(invite)](https://discord.gg/sbSa3pkDF5)
 
 #### Q: Is it really "blazingly fast"?
 

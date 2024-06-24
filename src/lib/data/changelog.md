@@ -87,6 +87,6 @@ If you missed the news, please read the announcement in the discord channel. [#a
 - fix dead column still showing when players has respawned
 
 
-**Older Changelogs**: [link](https://github.com/snoww/loa-logs/releases/tag/v1.9.10)
+**Older Changelogs**: [link](https://github.com/MaccolSolZico/loa-logs-kr/releases/tag/v1.9.10)
 
-send bug reports/suggestions to [#loa-logs](https://discord.gg/sbSa3pkDF5)
+send bug reports/suggestions to [#loa-logs-kr](https://discord.gg/sbSa3pkDF5)
