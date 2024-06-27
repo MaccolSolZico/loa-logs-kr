@@ -6,11 +6,11 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                sans: ["Inter Variable", ...defaultTheme.fontFamily.sans]
+                sans: ["Noto Sans KR Variable", ...defaultTheme.fontFamily.sans]
             },
             fontSize: {
-                xxs: "0.875rem", // 14px
-                "3xs": "0.75rem",
+                xxs: "0.938rem", // 15px
+                "3xs": "0.813rem",
                 ...defaultTheme.fontSize
             },
             animation: {
