@@ -310,7 +310,7 @@ pub fn get_skill_name_and_icon(
     skill_name: String,
 ) -> (String, String) {
     if (*skill_id == 0) && (*skill_effect_id == 0) {
-        ("Bleed".to_string(), "buff_168.png".to_string())
+        ("출혈".to_string(), "buff_168.png".to_string())
     } else if (*skill_effect_id != 0) && (*skill_effect_id == *skill_id) {
         return if let Some(effect) = SKILL_EFFECT_DATA.get(skill_effect_id) {
             if let Some(item_name) = effect.item_name.as_ref() {
