@@ -9,9 +9,9 @@
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/maccolsolzico)
 
 
-LOA Logs KR is a "blazingly fast" open source Lost Ark DPS meter, written in Rust by [MaccolSolZico](https://github.com/MaccolSolZico). 
+LOA Logs is a "blazingly fast" open source Lost Ark DPS meter, written in Rust by [Snow](https://github.com/snoww). 
 
-This project is an opinionated flavor of [LOA Details](https://github.com/lost-ark-dev/loa-details) by Herysia and Mathi, but should share very similar user interfaces and settings. The packet sniffing and processing has been completely ported over to Rust, with [`meter-core-rs-kr`](https://github.com/MaccolSolZico/meter-core-rs-kr). The Rust port could not be made without Herysia and Henjuro's work on [`meter-core`](https://github.com/lost-ark-dev/meter-core).
+This project is an opinionated flavor of [LOA Details](https://github.com/lost-ark-dev/loa-details) by Herysia and Mathi, but should share very similar user interfaces and settings. The packet sniffing and processing has been completely ported over to Rust, with [`meter-core-rs`](https://github.com/snoww/meter-core-rs). The Rust port could not be made without Herysia and Henjuro's work on [`meter-core`](https://github.com/lost-ark-dev/meter-core).
 
 This project was designed specifically with hell-raiding in mind.
 
@@ -22,7 +22,7 @@ https://github.com/MaccolSolZico/loa-logs-kr/releases
 
 > [!IMPORTANT]
 > ### Prerequisites
-> Npcap is required to run LOA Logs KR.
+> Npcap is required to run LOA Logs.
 >
 > Download [here](https://npcap.com/#download).
 
@@ -30,7 +30,7 @@ https://github.com/MaccolSolZico/loa-logs-kr/releases
 
 You can support me directly by buying me a [coffee.](https://www.buymeacoffee.com/maccolsolzico)
 
-You can support loa-logs' Snow [coffee.](https://www.buymeacoffee.com/synow)
+You can support loa-logs' Snow's [coffee.](https://www.buymeacoffee.com/synow)
 
 You can also support LOA Details' Herysia's [Patreon.](https://patreon.com/Herysia)
 
@@ -43,7 +43,7 @@ A: Right-click the taskbar icon (located in the bottom right of your screen, nex
 
 A: There can be multiple reasons. Did you install Npcap? If that still doesn't work, enable raw socket mode by doing the following: *Settings > General > Un-check Auto Network Selection > Raw Socket*. You must restart the meter as admin.
 
-#### Q: How to use ExitLag with LOA Logs KR?
+#### Q: How to use ExitLag with LOA Logs?
 
 A: ExitLag recently updated their settings which changed how they redirect packets. Change your ExitLag settings to *Packet redirection method > Legacy - NDIS*. If that still doesn't work. Turn on raw socket by following the steps above.
 
