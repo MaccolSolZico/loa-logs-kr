@@ -372,7 +372,7 @@
                     class:bg-accent-900={tab === MeterTab.DAMAGE}
                     class:bg-gray-700={tab !== MeterTab.DAMAGE}
                     on:click={damageTab}>
-                    Damage
+                    데미지
                 </button>
                 {#if anyRdpsData || $rdpsEventDetails !== ""}
                     <button
@@ -388,14 +388,14 @@
                     class:bg-accent-900={tab === MeterTab.PARTY_BUFFS}
                     class:bg-gray-700={tab !== MeterTab.PARTY_BUFFS}
                     on:click={partySynergyTab}>
-                    Party Buffs
+                    파티 버프
                 </button>
                 <button
                     class="flex-shrink-0 rounded-sm px-2 py-1"
                     class:bg-accent-900={tab === MeterTab.SELF_BUFFS}
                     class:bg-gray-700={tab !== MeterTab.SELF_BUFFS}
                     on:click={selfSynergyTab}>
-                    Self Buffs
+                    자버프
                 </button>
                 {#if $settings.general.showShields && encounter.encounterDamageStats.totalShielding > 0}
                     <button
@@ -403,7 +403,7 @@
                         class:bg-accent-900={tab === MeterTab.SHIELDS}
                         class:bg-gray-700={tab !== MeterTab.SHIELDS}
                         on:click={shieldTab}>
-                        Shields
+                        쉴드
                     </button>
                 {/if}
                 {#if $settings.general.showTanked && encounter.encounterDamageStats.totalDamageTaken > 0}
@@ -412,7 +412,7 @@
                         class:bg-accent-900={tab === MeterTab.TANK}
                         class:bg-gray-700={tab !== MeterTab.TANK}
                         on:click={tankTab}>
-                        Tanked
+                        받은 피해량
                     </button>
                 {/if}
                 {#if $settings.general.showBosses && bosses.length > 0}
@@ -430,7 +430,7 @@
                         class:bg-accent-900={tab === MeterTab.IDENTITY}
                         class:bg-gray-700={tab !== MeterTab.IDENTITY}
                         on:click={identityTab}>
-                        Identity
+                        아이덴티티
                     </button>
                 {/if}
                 {#if encounter.encounterDamageStats.misc && encounter.encounterDamageStats.misc.staggerStats}
@@ -439,7 +439,7 @@
                         class:bg-accent-900={tab === MeterTab.STAGGER}
                         class:bg-gray-700={tab !== MeterTab.STAGGER}
                         on:click={staggerTab}>
-                        Stagger
+                        무력화
                     </button>
                 {/if}
                 <button
@@ -474,10 +474,10 @@
                                         dropdownOpen = false;
                                         captureScreenshot();
                                     }}>
-                                    Take Screenshot
+                                    스크린샷 복사
                                 </button>
                                 <button class="flex items-center justify-between bg-gray-700 p-1">
-                                    <span class="text-sm">Show Names</span>
+                                    <span class="text-sm">닉네임 표시</span>
                                     <label class="relative inline-flex cursor-pointer items-center">
                                         <input
                                             type="checkbox"
@@ -494,7 +494,7 @@
                                         dropdownOpen = false;
                                         deleteConfirm = true;
                                     }}>
-                                    Delete
+                                    삭제
                                 </button>
                             </div>
                         </div>
@@ -735,14 +735,14 @@
                         class:bg-accent-900={chartType === ChartType.AVERAGE_DPS}
                         class:bg-gray-700={chartType !== ChartType.AVERAGE_DPS}
                         on:click={() => (chartType = ChartType.AVERAGE_DPS)}>
-                        Average DPS
+                        평균 DPS
                     </button>
                     <button
                         class="rounded-sm px-2 py-1"
                         class:bg-accent-900={chartType === ChartType.ROLLING_DPS}
                         class:bg-gray-700={chartType !== ChartType.ROLLING_DPS}
                         on:click={() => (chartType = ChartType.ROLLING_DPS)}>
-                        10s DPS Window
+                        10초 DPS
                     </button>
                 {:else if playerName !== "" && state === MeterState.PLAYER}
                     <button
