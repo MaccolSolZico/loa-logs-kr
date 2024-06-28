@@ -3,7 +3,8 @@ import type { Entity } from "$lib/types";
 import { round2 } from "./numbers";
 
 export function isValidName(word: string) {
-    return /^\p{Lu}/u.test(word);
+    // return /^\p{Lu}/u.test(word);
+    return word;
 }
 
 export function removeUnknownHtmlTags(input: string) {
