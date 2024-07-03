@@ -335,7 +335,7 @@ pub fn get_skill_name_and_icon(
             if let Some(summon_source_skill) = skill.summon_source_skill.as_ref() {
                 // todo
                 if let Some(skill) = SKILL_DATA.get(summon_source_skill.first().unwrap_or(&0)) {
-                    (skill.name.clone() + " (Summon)", skill.icon.clone())
+                    (skill.name.clone() + " (소환수)", skill.icon.clone())
                 } else {
                     (skill_name, "".to_string())
                 }
