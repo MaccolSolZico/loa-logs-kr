@@ -6,8 +6,6 @@
 [![GitHub](https://img.shields.io/github/v/release/MaccolSolZico/loa-logs-kr?style=flat-square)](https://github.com/MaccolSolZico/loa-logs-kr/releases)
 [![GitHub](https://img.shields.io/github/license/MaccolSolZico/loa-logs-kr?style=flat-square)](https://github.com/MaccolSolZico/loa-logs-kr/blob/master/LICENSE)
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/maccolsolzico)
-
 
 LOA Logs is a "blazingly fast" open source Lost Ark DPS meter, written in Rust by [Snow](https://github.com/snoww). 
 
@@ -29,8 +27,11 @@ https://github.com/MaccolSolZico/loa-logs-kr/releases
 # Supporting the Project
 
 You can support me directly by buying me a [coffee.](https://www.buymeacoffee.com/maccolsolzico)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/maccolsolzico)
 
-You can support loa-logs' Snow's [coffee.](https://www.buymeacoffee.com/synow)
+You can support loa-logs' Snow's
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/synow)
+[<img src="static/kofi.png" alt="Ko-fi" width="230"/>](https://ko-fi.com/synow)
 
 You can also support LOA Details' Herysia's [Patreon.](https://patreon.com/Herysia)
 
