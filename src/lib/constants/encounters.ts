@@ -69,4 +69,4 @@ export const encounterMap: { [key: string]: { [key: string]: Array<string> } } =
     }
 };
 
-export const difficultyMap: Array<string> = ["노말", "하드", "헬", "도전", "시련", "익스트림", "더 퍼스트"];
+export const difficultyMap: Array<string> = ["노말", "하드", "헬", "도전", "솔로", "시련", "익스트림", "더 퍼스트"];

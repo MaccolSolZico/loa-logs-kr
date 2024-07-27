@@ -1,5 +1,6 @@
 <script lang="ts">
     import "@fontsource-variable/noto-sans-kr";
+    import '@fontsource-variable/jetbrains-mono';
     import "../app.css";
     import { onDestroy, onMount } from "svelte";
     import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -80,6 +81,8 @@
                 }
                 if (manifest?.version.includes("2024")) {
                     $updateSettings.isNotice = true;
+                } else {
+                    $updateSettings.isNotice = false;
                 }
             }
         } catch (e) {

@@ -1,8 +1,6 @@
 use crate::parser::id_tracker::IdTracker;
 use crate::parser::models::EntityType::*;
-use crate::parser::models::{
-    EntityType, Esther, PassiveOption, ESTHER_DATA, ITEM_SET_INFO, NPC_DATA, SKILL_DATA,
-};
+use crate::parser::models::{EntityType, Esther, PassiveOption, ESTHER_DATA, ITEM_SET_INFO, NPC_DATA, SKILL_DATA, EncounterEntity};
 use crate::parser::party_tracker::PartyTracker;
 use crate::parser::status_tracker::{
     build_status_effect, StatusEffectDetails, StatusEffectTargetType, StatusEffectType,
@@ -15,8 +13,9 @@ use log::{info, warn};
 use meter_core::packets::common::StatPair;
 use meter_core::packets::definitions::*;
 use meter_core::packets::structures::{EquipItemData, ItemData, NpcData, StatusEffectData};
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct EntityTracker {
     id_tracker: Rc<RefCell<IdTracker>>,
@@ -281,16 +280,13 @@ impl EntityTracker {
     pub fn party_status_effect_add(
         &mut self,
         pkt: PKTPartyStatusEffectAddNotify,
+        entities: &HashMap<String, EncounterEntity>,
     ) -> Vec<StatusEffectDetails> {
         let timestamp = Utc::now();
         let mut shields: Vec<StatusEffectDetails> = Vec::new();
         for sed in pkt.status_effect_datas {
-            let source_id = if pkt.player_id_on_refresh != 0 {
-                pkt.player_id_on_refresh
-            } else {
-                sed.source_id
-            };
-            let entity = self.get_source_entity(source_id);
+            let entity = self.get_source_entity(sed.source_id);
+            let encounter_entity = entities.get(&entity.name);
             // println!("entity: {:?}", entity);
             let status_effect = build_status_effect(
                 sed,
@@ -298,6 +294,7 @@ impl EntityTracker {
                 entity.id,
                 StatusEffectTargetType::Party,
                 timestamp,
+                encounter_entity
             );
             if status_effect.status_effect_type == StatusEffectType::Shield {
                 shields.push(status_effect.clone());
@@ -321,7 +318,7 @@ impl EntityTracker {
         )
     }
 
-    pub fn new_projectile(&mut self, pkt: PKTNewProjectile) {
+    pub fn new_projectile(&mut self, pkt: &PKTNewProjectile) {
         let projectile = Entity {
             id: pkt.projectile_info.projectile_id,
             entity_type: PROJECTILE,
@@ -334,7 +331,7 @@ impl EntityTracker {
         self.entities.insert(projectile.id, projectile);
     }
 
-    pub fn new_trap(&mut self, pkt: PKTNewTrap) {
+    pub fn new_trap(&mut self, pkt: &PKTNewTrap) {
         let trap = Entity {
             id: pkt.trap_data.object_id,
             entity_type: PROJECTILE,
@@ -436,6 +433,14 @@ impl EntityTracker {
             entity
         }
     }
+    
+    pub fn id_is_player(&mut self, id: u64) -> bool {
+        if let Some(entity) = self.entities.get(&id) {
+            entity.entity_type == PLAYER
+        } else {
+            false
+        }
+    }
 
     pub fn guess_is_player(&mut self, entity: &mut Entity, skill_id: u32) {
         if (entity.entity_type != UNKNOWN && entity.entity_type != PLAYER)
@@ -464,14 +469,17 @@ impl EntityTracker {
         sed: &StatusEffectData,
         target_id: u64,
         timestamp: DateTime<Utc>,
+        entities: Option<&HashMap<String, EncounterEntity>>,
     ) -> StatusEffectDetails {
         let source_entity = self.get_source_entity(sed.source_id);
+        let source_encounter_entity = entities.and_then(|entities| entities.get(&source_entity.name));
         let status_effect = build_status_effect(
             sed.clone(),
             target_id,
             source_entity.id,
             StatusEffectTargetType::Local,
             timestamp,
+            source_encounter_entity,
         );
 
         self.status_tracker
@@ -484,7 +492,7 @@ impl EntityTracker {
     fn build_and_register_status_effects(&mut self, seds: Vec<StatusEffectData>, target_id: u64) {
         let timestamp = Utc::now();
         for sed in seds.into_iter() {
-            self.build_and_register_status_effect(&sed, target_id, timestamp);
+            self.build_and_register_status_effect(&sed, target_id, timestamp, None);
         }
     }
 

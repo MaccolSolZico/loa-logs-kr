@@ -29,7 +29,7 @@
     let playerName: string;
 
     $: {
-        playerName = formatPlayerName(entity, $settings.general.showNames, $settings.general.showGearScore, false);
+        playerName = formatPlayerName(entity, $settings.general);
     }
     let dps = abbreviateNumberSplit(entity.damageStats.dps);
     let damageDealt = abbreviateNumberSplit(entity.damageStats.damageDealt);
@@ -173,6 +173,7 @@
                 <td class="px-1 text-center"> - </td>
             {/if}
             {#if $settings.logs.breakdown.maxDamage}
+                <td class="px-1 text-center"> - </td>
                 <td class="px-1 text-center"> - </td>
             {/if}
             {#if $settings.logs.breakdown.casts}

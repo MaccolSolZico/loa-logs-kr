@@ -4,10 +4,12 @@ mod id_tracker;
 pub mod models;
 mod party_tracker;
 mod rdps;
+mod skill_tracker;
 mod stats_api;
 mod status_tracker;
 mod utils;
 
+use self::models::{Settings, TripodIndex, TripodLevel};
 use crate::parser::encounter_state::EncounterState;
 use crate::parser::entity_tracker::{get_current_and_max_hp, EntityTracker};
 use crate::parser::id_tracker::IdTracker;
@@ -38,8 +40,6 @@ use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{Manager, Window, Wry};
 use uuid::Uuid;
-
-use self::models::{Settings, TripodIndex, TripodLevel};
 
 pub fn start(
     window: Window<Wry>,
@@ -391,12 +391,34 @@ pub fn start(
             }
             Pkt::NewProjectile => {
                 if let Some(pkt) = parse_pkt(&data, PKTNewProjectile::new, "PKTNewProjectile") {
-                    entity_tracker.new_projectile(pkt);
+                    entity_tracker.new_projectile(&pkt);
+                    if entity_tracker.id_is_player(pkt.projectile_info.owner_id)
+                        && pkt.projectile_info.skill_id > 0
+                    {
+                        let key = (pkt.projectile_info.owner_id, pkt.projectile_info.skill_id);
+                        if let Some(timestamp) = state.skill_tracker.skill_timestamp.get(&key) {
+                            state
+                                .skill_tracker
+                                .projectile_id_to_timestamp
+                                .insert(pkt.projectile_info.projectile_id, timestamp);
+                        }
+                    }
                 }
             }
             Pkt::NewTrap => {
                 if let Some(pkt) = parse_pkt(&data, PKTNewTrap::new, "PKTNewTrap") {
-                    entity_tracker.new_trap(pkt);
+                    entity_tracker.new_trap(&pkt);
+                    if entity_tracker.id_is_player(pkt.trap_data.owner_id)
+                        && pkt.trap_data.skill_id > 0
+                    {
+                        let key = (pkt.trap_data.owner_id, pkt.trap_data.skill_id);
+                        if let Some(timestamp) = state.skill_tracker.skill_timestamp.get(&key) {
+                            state
+                                .skill_tracker
+                                .projectile_id_to_timestamp
+                                .insert(pkt.trap_data.object_id, timestamp);
+                        }
+                    }
                 }
             }
             Pkt::ParalyzationStateNotify => {
@@ -472,7 +494,7 @@ pub fn start(
                     entity_tracker.guess_is_player(&mut entity, pkt.skill_id);
                     if entity.class_id == 202 {
                         state.on_skill_start(
-                            entity,
+                            &entity,
                             pkt.skill_id,
                             None,
                             None,
@@ -502,13 +524,18 @@ pub fn start(
                                 second: tripod_level.second,
                                 third: tripod_level.third,
                             });
-                    state.on_skill_start(
-                        entity,
+                    let timestamp = Utc::now().timestamp_millis();
+                    let (skill_id, summon_source) = state.on_skill_start(
+                        &entity,
                         pkt.skill_id,
                         tripod_index,
                         tripod_level,
-                        Utc::now().timestamp_millis(),
+                        timestamp,
                     );
+                    
+                    if entity.entity_type == EntityType::PLAYER && skill_id > 0 {
+                        state.skill_tracker.new_cast(entity.id, skill_id, summon_source, timestamp);
+                    }
                 }
             }
             // Pkt::SkillStageNotify => {
@@ -641,27 +668,29 @@ pub fn start(
                     PKTPartyStatusEffectAddNotify::new,
                     "PKTPartyStatusEffectAddNotify",
                 ) {
-                    let shields = entity_tracker.party_status_effect_add(pkt);
-                    // for status_effect in shields {
-                    //     let source = entity_tracker.get_source_entity(status_effect.source_id);
-                    //     let target_id =
-                    //         if status_effect.target_type == StatusEffectTargetType::Party {
-                    //             id_tracker
-                    //                 .borrow()
-                    //                 .get_entity_id(status_effect.target_id)
-                    //                 .unwrap_or_default()
-                    //         } else {
-                    //             status_effect.target_id
-                    //         };
-                    //     let target = entity_tracker.get_source_entity(target_id);
-                    //     state.on_boss_shield(&target, status_effect.value);
-                    //     state.on_shield_applied(
-                    //         &source,
-                    //         &target,
-                    //         status_effect.status_effect_id,
-                    //         status_effect.value,
-                    //     );
-                    // }
+                    // info!("{:?}", pkt);
+                    let shields = entity_tracker.party_status_effect_add(pkt, &state.encounter.entities);
+                    for status_effect in shields {
+                        let source = entity_tracker.get_source_entity(status_effect.source_id);
+                        let target_id =
+                            if status_effect.target_type == StatusEffectTargetType::Party {
+                                id_tracker
+                                    .borrow()
+                                    .get_entity_id(status_effect.target_id)
+                                    .unwrap_or_default()
+                            } else {
+                                status_effect.target_id
+                            };
+                        let target = entity_tracker.get_source_entity(target_id);
+                        // info!("SHIELD SOURCE: {} > TARGET: {}", source.name, target.name);
+                        state.on_boss_shield(&target, status_effect.value);
+                        state.on_shield_applied(
+                            &source,
+                            &target,
+                            status_effect.status_effect_id,
+                            status_effect.value,
+                        );
+                    }
                 }
             }
             Pkt::PartyStatusEffectRemoveNotify => {
@@ -680,18 +709,18 @@ pub fn start(
                             }
                         }
                     }
-                    // if is_shield {
-                    //     for status_effect in shields_broken {
-                    //         let change = status_effect.value;
-                    //         on_shield_change(
-                    //             &mut entity_tracker,
-                    //             &id_tracker,
-                    //             &mut state,
-                    //             status_effect,
-                    //             change,
-                    //         );
-                    //     }
-                    // }
+                    if is_shield {
+                        for status_effect in shields_broken {
+                            let change = status_effect.value;
+                            on_shield_change(
+                                &mut entity_tracker,
+                                &id_tracker,
+                                &mut state,
+                                status_effect,
+                                change,
+                            );
+                        }
+                    }
                 }
             }
             Pkt::PartyStatusEffectResultNotify => {
@@ -700,6 +729,7 @@ pub fn start(
                     PKTPartyStatusEffectResultNotify::new,
                     "PKTPartyStatusEffectResultNotify",
                 ) {
+                    // info!("{:?}", pkt);
                     party_tracker.borrow_mut().add(
                         pkt.raid_instance_id,
                         pkt.party_instance_id,
@@ -719,27 +749,28 @@ pub fn start(
                         &pkt.status_effect_data,
                         pkt.object_id,
                         Utc::now(),
+                        Some(&state.encounter.entities),
                     );
-                    // if status_effect.status_effect_type == StatusEffectType::Shield {
-                    //     let source = entity_tracker.get_source_entity(status_effect.source_id);
-                    //     let target_id =
-                    //         if status_effect.target_type == StatusEffectTargetType::Party {
-                    //             id_tracker
-                    //                 .borrow()
-                    //                 .get_entity_id(status_effect.target_id)
-                    //                 .unwrap_or_default()
-                    //         } else {
-                    //             status_effect.target_id
-                    //         };
-                    //     let target = entity_tracker.get_source_entity(target_id);
-                    //     state.on_boss_shield(&target, status_effect.value);
-                    //     state.on_shield_applied(
-                    //         &source,
-                    //         &target,
-                    //         status_effect.status_effect_id,
-                    //         status_effect.value,
-                    //     );
-                    // }
+                    if status_effect.status_effect_type == StatusEffectType::Shield {
+                        let source = entity_tracker.get_source_entity(status_effect.source_id);
+                        let target_id =
+                            if status_effect.target_type == StatusEffectTargetType::Party {
+                                id_tracker
+                                    .borrow()
+                                    .get_entity_id(status_effect.target_id)
+                                    .unwrap_or_default()
+                            } else {
+                                status_effect.target_id
+                            };
+                        let target = entity_tracker.get_source_entity(target_id);
+                        state.on_boss_shield(&target, status_effect.value);
+                        state.on_shield_applied(
+                            &source,
+                            &target,
+                            status_effect.status_effect_id,
+                            status_effect.value,
+                        );
+                    }
                 }
             }
             Pkt::StatusEffectDurationNotify => {
@@ -774,23 +805,23 @@ pub fn start(
                             stats_api.sync(entity, &state);
                         }
                     }
-                    // if is_shield {
-                    //     if shields_broken.is_empty() {
-                    //         let target = entity_tracker.get_source_entity(pkt.object_id);
-                    //         state.on_boss_shield(&target, 0);
-                    //     } else {
-                    //         for status_effect in shields_broken {
-                    //             let change = status_effect.value;
-                    //             on_shield_change(
-                    //                 &mut entity_tracker,
-                    //                 &id_tracker,
-                    //                 &mut state,
-                    //                 status_effect,
-                    //                 change,
-                    //             );
-                    //         }
-                    //     }
-                    // }
+                    if is_shield {
+                        if shields_broken.is_empty() {
+                            let target = entity_tracker.get_source_entity(pkt.object_id);
+                            state.on_boss_shield(&target, 0);
+                        } else {
+                            for status_effect in shields_broken {
+                                let change = status_effect.value;
+                                on_shield_change(
+                                    &mut entity_tracker,
+                                    &id_tracker,
+                                    &mut state,
+                                    status_effect,
+                                    change,
+                                );
+                            }
+                        }
+                    }
                 }
             }
             Pkt::TriggerBossBattleStatus => {
@@ -849,10 +880,12 @@ pub fn start(
                 ) {
                     stats_api.valid_zone = VALID_ZONES.contains(&pkt.zone_id);
 
-                    if state.raid_difficulty_id >= pkt.zone_id && !state.raid_difficulty.is_empty() {
+                    if state.raid_difficulty_id >= pkt.zone_id && !state.raid_difficulty.is_empty()
+                    {
                         continue;
                     }
                     debug_print(format_args!("raid zone id: {}", &pkt.zone_id));
+                    debug_print(format_args!("raid zone id: {}", &pkt.zone_level));
                     match pkt.zone_level {
                         0 => {
                             state.raid_difficulty = "노말".to_string();
@@ -871,7 +904,7 @@ pub fn start(
                             state.raid_difficulty_id = 3;
                         }
                         4 => {
-                            state.raid_difficulty = "스페셜".to_string();
+                            state.raid_difficulty = "솔로".to_string();
                             state.raid_difficulty_id = 4;
                         }
                         5 => {
@@ -929,6 +962,7 @@ pub fn start(
                     PKTTroopMemberUpdateMinNotify::new,
                     "PKTTroopMemberUpdateMinNotify",
                 ) {
+                    // info!("{:?}", pkt);
                     for se in pkt.status_effect_datas.iter() {
                         if let Some(object_id) = id_tracker.borrow().get_entity_id(pkt.character_id)
                         {
@@ -984,7 +1018,7 @@ pub fn start(
                                 .enumerate()
                                 .map(|(index, party)| (index as i32, party.clone()))
                                 .collect();
-                            
+
                             if party.iter().all(|p| p.len() == 4) {
                                 party_cache = Some(party.clone());
                                 party_map_cache.clone_from(&current_party);

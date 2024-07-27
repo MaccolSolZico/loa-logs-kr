@@ -1,6 +1,3 @@
-use std::cmp::{max, Ordering};
-use std::default::Default;
-
 use chrono::Utc;
 use hashbrown::HashMap;
 use log::{info, warn};
@@ -8,6 +5,11 @@ use meter_core::packets::definitions::{PKTIdentityGaugeChangeNotify, PKTParalyza
 use moka::sync::Cache;
 use rsntp::SntpClient;
 use rusqlite::Connection;
+use std::cell::RefCell;
+use std::cmp::{max, Ordering};
+use std::default::Default;
+use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::parser::debug_print;
 use tauri::{Manager, Window, Wry};
@@ -16,6 +18,7 @@ use tokio::task;
 use crate::parser::entity_tracker::{Entity, EntityTracker};
 use crate::parser::models::*;
 use crate::parser::rdps::*;
+use crate::parser::skill_tracker::SkillTracker;
 use crate::parser::stats_api::{PlayerStats, StatsApi};
 use crate::parser::status_tracker::StatusEffectDetails;
 use crate::parser::utils::*;
@@ -53,6 +56,10 @@ pub struct EncounterState {
     ntp_fight_start: i64,
 
     pub rdps_valid: bool,
+
+    pub skill_tracker: SkillTracker,
+
+    custom_id_map: HashMap<u32, u32>
 }
 
 impl EncounterState {
@@ -84,6 +91,10 @@ impl EncounterState {
 
             // todo
             rdps_valid: false,
+
+            skill_tracker: SkillTracker::new(),
+
+            custom_id_map: HashMap::new(),
         }
     }
 
@@ -110,6 +121,10 @@ impl EncounterState {
         self.ntp_fight_start = 0;
 
         self.rdps_valid = false;
+
+        self.skill_tracker = SkillTracker::new();
+        
+        self.custom_id_map = HashMap::new();
 
         for (key, entity) in clone.entities.into_iter().filter(|(_, e)| {
             e.entity_type == EntityType::PLAYER
@@ -290,13 +305,16 @@ impl EncounterState {
             if npc.entity_type == EntityType::BOSS {
                 // if current encounter has no boss, we set the boss
                 // if current encounter has a boss, we check if new boss has more max hp, or if current boss is dead
-                self.encounter.current_boss_name = self
+                self.encounter.current_boss_name = if self
                     .encounter
                     .entities
                     .get(&self.encounter.current_boss_name)
                     .map_or(true, |boss| npc.max_hp >= boss.max_hp || boss.is_dead)
-                    .then(|| entity_name)
-                    .unwrap_or(self.encounter.current_boss_name.clone());
+                {
+                    entity_name
+                } else {
+                    self.encounter.current_boss_name.clone()
+                };
             }
         }
     }
@@ -332,15 +350,15 @@ impl EncounterState {
 
     pub fn on_skill_start(
         &mut self,
-        source_entity: Entity,
+        source_entity: &Entity,
         skill_id: u32,
         tripod_index: Option<TripodIndex>,
         tripod_level: Option<TripodLevel>,
         timestamp: i64,
-    ) {
+    ) -> (u32, Option<Vec<u32>>) {
         // do not track skills if encounter not started
         if self.encounter.fight_start == 0 {
-            return;
+            return (0, None);
         }
         let skill_name = get_skill_name(&skill_id);
         let mut tripod_change = false;
@@ -349,9 +367,14 @@ impl EncounterState {
             .entities
             .entry(source_entity.name.clone())
             .or_insert_with(|| {
-                let (skill_name, skill_icon) =
-                    get_skill_name_and_icon(&skill_id, &0, skill_name.clone());
-                let mut entity = encounter_entity_from_entity(&source_entity);
+                let (skill_name, skill_icon, summons) = get_skill_name_and_icon(
+                    &skill_id,
+                    &0,
+                    skill_name.clone(),
+                    &self.skill_tracker,
+                    source_entity.id,
+                );
+                let mut entity = encounter_entity_from_entity(source_entity);
                 entity.skill_stats = SkillStats {
                     casts: 0,
                     ..Default::default()
@@ -364,6 +387,7 @@ impl EncounterState {
                         icon: skill_icon,
                         tripod_index,
                         tripod_level,
+                        summon_sources: summons,
                         casts: 0,
                         ..Default::default()
                     },
@@ -392,12 +416,14 @@ impl EncounterState {
         // if skills have different ids but the same name, we group them together
         // dunno if this is right approach xd
         let mut skill_id = skill_id;
+        let mut skill_summon_sources: Option<Vec<u32>> = None;
         if let Some(skill) = entity.skills.get_mut(&skill_id) {
             skill.casts += 1;
             tripod_change = check_tripod_index_change(skill.tripod_index, tripod_index)
                 || check_tripod_level_change(skill.tripod_level, tripod_level);
             skill.tripod_index = tripod_index;
             skill.tripod_level = tripod_level;
+            skill_summon_sources.clone_from(&skill.summon_sources);
         } else if let Some(skill) = entity
             .skills
             .values_mut()
@@ -409,9 +435,16 @@ impl EncounterState {
                 || check_tripod_level_change(skill.tripod_level, tripod_level);
             skill.tripod_index = tripod_index;
             skill.tripod_level = tripod_level;
+            skill_summon_sources.clone_from(&skill.summon_sources);
         } else {
-            let (skill_name, skill_icon) =
-                get_skill_name_and_icon(&skill_id, &0, skill_name.clone());
+            let (skill_name, skill_icon, summons) = get_skill_name_and_icon(
+                &skill_id,
+                &0,
+                skill_name.clone(),
+                &self.skill_tracker,
+                source_entity.id,
+            );
+            skill_summon_sources.clone_from(&summons);
             entity.skills.insert(
                 skill_id,
                 Skill {
@@ -420,6 +453,7 @@ impl EncounterState {
                     icon: skill_icon,
                     tripod_index,
                     tripod_level,
+                    summon_sources: summons,
                     casts: 1,
                     ..Default::default()
                 },
@@ -468,6 +502,8 @@ impl EncounterState {
             .entry(skill_id)
             .or_default()
             .push(relative_timestamp);
+
+        (skill_id, skill_summon_sources)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -550,9 +586,7 @@ impl EncounterState {
                 target_entity
             })
             .to_owned();
-
-        source_entity.id = dmg_src_entity.id;
-
+        
         // if boss only damage is enabled
         // check if target is boss and not player
         // check if target is player and source is boss
@@ -567,6 +601,15 @@ impl EncounterState {
 
         if self.encounter.fight_start == 0 {
             self.encounter.fight_start = timestamp;
+            self.skill_tracker.fight_start = timestamp;
+            if source_entity.entity_type == EntityType::PLAYER && damage_data.skill_id > 0 {
+                self.skill_tracker.new_cast(
+                    source_entity.id,
+                    damage_data.skill_id,
+                    None,
+                    timestamp,
+                );
+            }
 
             if let Ok(result) = self.sntp_client.synchronize("time.cloudflare.com") {
                 let dt = result.datetime().into_chrono_datetime().unwrap_or_default();
@@ -582,6 +625,8 @@ impl EncounterState {
 
         self.encounter.last_combat_packet = timestamp;
 
+        source_entity.id = dmg_src_entity.id;
+        
         if target_entity.id == dmg_target_entity.id {
             target_entity.current_hp = damage_data.target_current_hp;
             target_entity.max_hp = damage_data.target_max_hp;
@@ -599,11 +644,21 @@ impl EncounterState {
         };
 
         let skill_data = get_skill(&skill_id);
-        let mut skill_name = skill_data
-            .as_ref()
-            .map_or("".to_string(), |s| s.name.clone());
+        let mut skill_name = "".to_string();
+        let mut skill_summon_sources: Option<Vec<u32>> = None;
+        if let Some(skill_data) = skill_data.as_ref() {
+            skill_name.clone_from(&skill_data.name);
+            skill_summon_sources.clone_from(&skill_data.summon_source_skill);
+        }
+
         if skill_name.is_empty() {
-            skill_name = get_skill_name_and_icon(&skill_id, &skill_effect_id, "".to_string()).0;
+            (skill_name, _, skill_summon_sources) = get_skill_name_and_icon(
+                &skill_id,
+                &skill_effect_id,
+                skill_id.to_string(),
+                &self.skill_tracker,
+                source_entity.id,
+            );
         }
         let relative_timestamp = (timestamp - self.encounter.fight_start) as i32;
 
@@ -615,20 +670,20 @@ impl EncounterState {
             {
                 skill_id = skill.id;
             } else {
-                let (skill_name, skill_icon) =
-                    get_skill_name_and_icon(&skill_id, &skill_effect_id, skill_name.clone());
-                self.cast_log
-                    .entry(source_entity.name.clone())
-                    .or_default()
-                    .entry(skill_id)
-                    .or_default()
-                    .push(relative_timestamp);
+                let (skill_name, skill_icon, _) = get_skill_name_and_icon(
+                    &skill_id,
+                    &skill_effect_id,
+                    skill_name.clone(),
+                    &self.skill_tracker,
+                    source_entity.id,
+                );
                 source_entity.skills.insert(
                     skill_id,
                     Skill {
                         id: skill_id,
                         name: skill_name,
                         icon: skill_icon,
+                        summon_sources: skill_summon_sources.clone(),
                         casts: 1,
                         ..Default::default()
                     },
@@ -638,10 +693,17 @@ impl EncounterState {
 
         let skill = source_entity.skills.get_mut(&skill_id).unwrap();
 
+        let mut skill_hit = SkillHit {
+            damage,
+            timestamp: relative_timestamp as i64,
+            ..Default::default()
+        };
+
         skill.total_damage += damage;
         if damage > skill.max_damage {
             skill.max_damage = damage;
         }
+        skill.last_timestamp = timestamp;
 
         source_entity.damage_stats.damage_dealt += damage;
         target_entity.damage_stats.damage_taken += damage;
@@ -654,18 +716,21 @@ impl EncounterState {
             source_entity.damage_stats.crit_damage += damage;
             skill.crits += 1;
             skill.crit_damage += damage;
+            skill_hit.crit = true;
         }
         if hit_option == HitOption::BACK_ATTACK {
             source_entity.skill_stats.back_attacks += 1;
             source_entity.damage_stats.back_attack_damage += damage;
             skill.back_attacks += 1;
             skill.back_attack_damage += damage;
+            skill_hit.back_attack = true;
         }
         if hit_option == HitOption::FRONTAL_ATTACK {
             source_entity.skill_stats.front_attacks += 1;
             source_entity.damage_stats.front_attack_damage += damage;
             skill.front_attacks += 1;
             skill.front_attack_damage += damage;
+            skill_hit.front_attack = true;
         }
 
         if source_entity.entity_type == EntityType::PLAYER {
@@ -685,7 +750,7 @@ impl EncounterState {
             let mut is_debuffed_by_support = false;
             let se_on_source_ids = se_on_source
                 .iter()
-                .map(|se| se.status_effect_id)
+                .map(|se| map_status_effect(se, &mut self.custom_id_map))
                 .collect::<Vec<_>>();
             for buff_id in se_on_source_ids.iter() {
                 if !self
@@ -699,7 +764,16 @@ impl EncounterState {
                         .buffs
                         .contains_key(buff_id)
                 {
-                    if let Some(status_effect) = get_status_effect_data(*buff_id) {
+                    let mut source_id: Option<u32> = None;
+                    let original_buff_id = if let Some(deref_id) = self.custom_id_map.get(buff_id) {
+                        source_id = Some(get_skill_id(*buff_id));
+                        *deref_id
+                    } else {
+                        *buff_id
+                    };
+
+                    if let Some(status_effect) = get_status_effect_data(original_buff_id, source_id)
+                    {
                         self.encounter
                             .encounter_damage_stats
                             .buffs
@@ -734,7 +808,7 @@ impl EncounterState {
             }
             let se_on_target_ids = se_on_target
                 .iter()
-                .map(|se| se.status_effect_id)
+                .map(|se| map_status_effect(se, &mut self.custom_id_map))
                 .collect::<Vec<_>>();
             for debuff_id in se_on_target_ids.iter() {
                 if !self
@@ -748,7 +822,17 @@ impl EncounterState {
                         .debuffs
                         .contains_key(debuff_id)
                 {
-                    if let Some(status_effect) = get_status_effect_data(*debuff_id) {
+                    let mut source_id: Option<u32> = None;
+                    let original_debuff_id = if let Some(deref_id) = self.custom_id_map.get(debuff_id) {
+                        source_id = Some(get_skill_id(*debuff_id));
+                        *deref_id
+                    } else {
+                        *debuff_id
+                    };
+
+                    if let Some(status_effect) =
+                        get_status_effect_data(original_debuff_id, source_id)
+                    {
                         self.encounter
                             .encounter_damage_stats
                             .debuffs
@@ -786,32 +870,34 @@ impl EncounterState {
                 source_entity.damage_stats.debuffed_by_support += damage;
             }
 
-            for buff_id in se_on_source_ids.into_iter() {
+            for buff_id in se_on_source_ids.iter() {
                 skill
                     .buffed_by
-                    .entry(buff_id)
+                    .entry(*buff_id)
                     .and_modify(|e| *e += damage)
                     .or_insert(damage);
                 source_entity
                     .damage_stats
                     .buffed_by
-                    .entry(buff_id)
+                    .entry(*buff_id)
                     .and_modify(|e| *e += damage)
                     .or_insert(damage);
             }
-            for debuff_id in se_on_target_ids.into_iter() {
+            for debuff_id in se_on_target_ids.iter() {
                 skill
                     .debuffed_by
-                    .entry(debuff_id)
+                    .entry(*debuff_id)
                     .and_modify(|e| *e += damage)
                     .or_insert(damage);
                 source_entity
                     .damage_stats
                     .debuffed_by
-                    .entry(debuff_id)
+                    .entry(*debuff_id)
                     .and_modify(|e| *e += damage)
                     .or_insert(damage);
             }
+            skill_hit.buffed_by = se_on_source_ids;
+            skill_hit.debuffed_by = se_on_target_ids;
 
             // todo
             if let (true, Some(player_stats)) =
@@ -1309,6 +1395,7 @@ impl EncounterState {
                             self.encounter.entities.get_mut(&crit.caster),
                             skill_id,
                             delta,
+                            &mut skill_hit,
                         );
                     }
 
@@ -1320,6 +1407,7 @@ impl EncounterState {
                             self.encounter.entities.get_mut(&dmg.caster),
                             skill_id,
                             delta,
+                            &mut skill_hit,
                         );
                     }
 
@@ -1331,6 +1419,7 @@ impl EncounterState {
                             self.encounter.entities.get_mut(&dmg.caster),
                             skill_id,
                             delta,
+                            &mut skill_hit,
                         );
                     }
 
@@ -1343,6 +1432,7 @@ impl EncounterState {
                             self.encounter.entities.get_mut(&dmg.caster),
                             skill_id,
                             delta,
+                            &mut skill_hit,
                         );
                     }
 
@@ -1356,6 +1446,7 @@ impl EncounterState {
                             self.encounter.entities.get_mut(&dmg.caster),
                             skill_id,
                             delta,
+                            &mut skill_hit,
                         );
                     }
 
@@ -1368,6 +1459,7 @@ impl EncounterState {
                                 .get_mut(&attack_power_amplify.caster),
                             skill_id,
                             delta,
+                            &mut skill_hit,
                         );
                     }
                 } else if dmg_src_entity.entity_type == EntityType::PLAYER
@@ -1430,6 +1522,16 @@ impl EncounterState {
                 last.hp = current_hp;
                 last.p = hp_percent;
             }
+        }
+
+        if skill_id > 0 {
+            self.skill_tracker.on_hit(
+                source_entity.id,
+                proj_entity.id,
+                skill_id,
+                skill_hit,
+                skill_summon_sources,
+            );
         }
 
         self.encounter
@@ -1581,7 +1683,16 @@ impl EncounterState {
                 .applied_shield_buffs
                 .contains_key(&buff_id)
             {
-                if let Some(status_effect) = get_status_effect_data(buff_id) {
+                let mut source_id: Option<u32> = None;
+                let original_buff_id =
+                    if let Some(deref_id) = self.custom_id_map.get(&buff_id) {
+                        source_id = Some(get_skill_id(buff_id));
+                        *deref_id
+                    } else {
+                        buff_id
+                    };
+
+                if let Some(status_effect) = get_status_effect_data(original_buff_id, source_id) {
                     self.encounter
                         .encounter_damage_stats
                         .applied_shield_buffs
@@ -1708,7 +1819,7 @@ impl EncounterState {
         }
     }
 
-    pub fn save_to_db(&self, player_stats: Option<Cache<String, PlayerStats>>, manual: bool) {
+    pub fn save_to_db(&mut self, player_stats: Option<Cache<String, PlayerStats>>, manual: bool) {
         if !manual {
             if self.encounter.fight_start == 0
                 || self.encounter.current_boss_name.is_empty()
@@ -1762,14 +1873,17 @@ impl EncounterState {
 
         let rdps_valid = self.rdps_valid;
 
+        let skill_cast_log = self.skill_tracker.get_cast_log();
+
+        // debug_print(format_args!("skill cast log:\n{}", serde_json::to_string(&skill_cast_log).unwrap()));
+
         debug_print(format_args!("rdps_data valid: [{}]", rdps_valid));
+        info!(
+            "saving to db - cleared: [{}], difficulty: [{}] {}",
+            raid_clear, self.raid_difficulty, encounter.current_boss_name
+        );
 
         task::spawn(async move {
-            info!(
-                "saving to db - cleared: [{}] {}",
-                raid_clear, encounter.current_boss_name
-            );
-
             let mut conn = Connection::open(path).expect("failed to open database");
             let tx = conn.transaction().expect("failed to create transaction");
 
@@ -1792,6 +1906,7 @@ impl EncounterState {
                 ntp_fight_start,
                 rdps_valid,
                 manual,
+                skill_cast_log,
             );
 
             tx.commit().expect("failed to commit transaction");

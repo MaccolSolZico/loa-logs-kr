@@ -1,6 +1,6 @@
 import { encounterMap } from "$lib/constants/encounters";
-import { SearchFilter } from "$lib/types";
-import { readable, writable } from "svelte/store";
+import { SearchFilter, type SkillCastInfo } from "$lib/types";
+import { readable, writable, type Writable } from "svelte/store";
 import MarkdownIt from "markdown-it";
 
 export const takingScreenshot = writable(false);
@@ -38,6 +38,7 @@ export const clickthroughStore = writable(false);
 export const rdpsEventDetails = writable("");
 export const localPlayer = writable("");
 export const missingInfo = writable(false);
+export const focusedSkillCast: Writable<SkillCastInfo> = writable({ skillId: 0, cast: 0 });
 
 const md = new MarkdownIt({
     html: true
