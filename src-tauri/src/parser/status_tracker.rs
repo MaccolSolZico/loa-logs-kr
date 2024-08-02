@@ -8,8 +8,8 @@ use crate::parser::utils::get_new_id;
 use chrono::{DateTime, Duration, Utc};
 use hashbrown::HashMap;
 use log::warn;
-use meter_core::packets::definitions::PKTNewPC;
-use meter_core::packets::structures::StatusEffectData;
+// use meter_core::packets::definitions::PKTNewPC;
+// use meter_core::packets::structures::StatusEffectData;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -33,27 +33,27 @@ impl StatusTracker {
         }
     }
 
-    pub fn new_pc(&mut self, pkt: PKTNewPC, local_character_id: u64) {
-        let use_party_status_effects =
-            self.should_use_party_status_effect(pkt.pc_struct.character_id, local_character_id);
-        if use_party_status_effects {
-            self.remove_party_object(pkt.pc_struct.character_id);
-        } else {
-            self.remove_local_object(pkt.pc_struct.character_id);
-        }
-        let (target_id, target_type) = if use_party_status_effects {
-            (pkt.pc_struct.character_id, StatusEffectTargetType::Party)
-        } else {
-            (pkt.pc_struct.player_id, StatusEffectTargetType::Local)
-        };
-        let timestamp = Utc::now();
-        for sed in pkt.pc_struct.status_effect_datas.into_iter() {
-            let source_id = sed.source_id;
-            let status_effect =
-                build_status_effect(sed, target_id, source_id, target_type, timestamp, None);
-            self.register_status_effect(status_effect);
-        }
-    }
+    // pub fn new_pc(&mut self, pkt: PKTNewPC, local_character_id: u64) {
+    //     let use_party_status_effects =
+    //         self.should_use_party_status_effect(pkt.pc_struct.character_id, local_character_id);
+    //     if use_party_status_effects {
+    //         self.remove_party_object(pkt.pc_struct.character_id);
+    //     } else {
+    //         self.remove_local_object(pkt.pc_struct.character_id);
+    //     }
+    //     let (target_id, target_type) = if use_party_status_effects {
+    //         (pkt.pc_struct.character_id, StatusEffectTargetType::Party)
+    //     } else {
+    //         (pkt.pc_struct.player_id, StatusEffectTargetType::Local)
+    //     };
+    //     let timestamp = Utc::now();
+    //     for sed in pkt.pc_struct.status_effect_datas.into_iter() {
+    //         let source_id = sed.source_id;
+    //         let status_effect =
+    //             build_status_effect(sed, target_id, source_id, target_type, timestamp, None);
+    //         self.register_status_effect(status_effect);
+    //     }
+    // }
 
     pub fn register_status_effect(&mut self, se: StatusEffectDetails) {
         let registry = match se.target_type {
@@ -345,94 +345,94 @@ fn is_valid_for_raid(status_effect: &StatusEffectDetails) -> bool {
         && status_effect.show_type == All
 }
 
-pub fn build_status_effect(
-    se_data: StatusEffectData,
-    target_id: u64,
-    source_id: u64,
-    target_type: StatusEffectTargetType,
-    timestamp: DateTime<Utc>,
-    source_entity: Option<&EncounterEntity>,
-) -> StatusEffectDetails {
-    let value = get_status_effect_value(&se_data.value);
-    let mut status_effect_category = StatusEffectCategory::Other;
-    let mut buff_category = StatusEffectBuffCategory::Other;
-    let mut show_type = StatusEffectShowType::Other;
-    let mut status_effect_type = StatusEffectType::Other;
-    let mut name = "Unknown".to_string();
-    let mut db_target_type = "".to_string();
-    let mut custom_id = 0;
-    if let Some(effect) = SKILL_BUFF_DATA.get(&se_data.status_effect_id) {
-        name = effect.name.to_string();
-        if effect.category.as_str() == "debuff" {
-            status_effect_category = Debuff
-        }
-        match effect.buff_category.as_str() {
-            "bracelet" => buff_category = Bracelet,
-            "etc" => buff_category = Etc,
-            "battleitem" => buff_category = BattleItem,
-            "elixir" => buff_category = Elixir,
-            _ => {}
-        }
-        if effect.icon_show_type.as_str() == "all" {
-            show_type = All
-        }
-        if effect.buff_type.as_str() == "shield" {
-            status_effect_type = StatusEffectType::Shield
-        }
-        db_target_type = effect.target.to_string();
+// pub fn build_status_effect(
+//     se_data: StatusEffectData,
+//     target_id: u64,
+//     source_id: u64,
+//     target_type: StatusEffectTargetType,
+//     timestamp: DateTime<Utc>,
+//     source_entity: Option<&EncounterEntity>,
+// ) -> StatusEffectDetails {
+//     let value = get_status_effect_value(&se_data.value);
+//     let mut status_effect_category = StatusEffectCategory::Other;
+//     let mut buff_category = StatusEffectBuffCategory::Other;
+//     let mut show_type = StatusEffectShowType::Other;
+//     let mut status_effect_type = StatusEffectType::Other;
+//     let mut name = "Unknown".to_string();
+//     let mut db_target_type = "".to_string();
+//     let mut custom_id = 0;
+//     if let Some(effect) = SKILL_BUFF_DATA.get(&se_data.status_effect_id) {
+//         name = effect.name.to_string();
+//         if effect.category.as_str() == "debuff" {
+//             status_effect_category = Debuff
+//         }
+//         match effect.buff_category.as_str() {
+//             "bracelet" => buff_category = Bracelet,
+//             "etc" => buff_category = Etc,
+//             "battleitem" => buff_category = BattleItem,
+//             "elixir" => buff_category = Elixir,
+//             _ => {}
+//         }
+//         if effect.icon_show_type.as_str() == "all" {
+//             show_type = All
+//         }
+//         if effect.buff_type.as_str() == "shield" {
+//             status_effect_type = StatusEffectType::Shield
+//         }
+//         db_target_type = effect.target.to_string();
 
-        if let Some(source_skills) = effect.source_skill.as_ref() {
-            if source_skills.len() > 1 {
-                if let Some(source_entity) = source_entity {
-                    let mut last_time = i64::MIN;
-                    let mut last_skill = 0_u32;
-                    for source_skill in source_skills {
-                        if let Some(skill) = source_entity.skills.get(source_skill) {
-                            if skill.last_timestamp > last_time {
-                                last_skill = *source_skill;
-                                last_time = skill.last_timestamp;
-                            }
-                        }
-                    }
+//         if let Some(source_skills) = effect.source_skill.as_ref() {
+//             if source_skills.len() > 1 {
+//                 if let Some(source_entity) = source_entity {
+//                     let mut last_time = i64::MIN;
+//                     let mut last_skill = 0_u32;
+//                     for source_skill in source_skills {
+//                         if let Some(skill) = source_entity.skills.get(source_skill) {
+//                             if skill.last_timestamp > last_time {
+//                                 last_skill = *source_skill;
+//                                 last_time = skill.last_timestamp;
+//                             }
+//                         }
+//                     }
                     
-                    if last_skill > 0 {
-                        custom_id = get_new_id(last_skill);
-                    }
-                }
-            }
-        }
-    }
+//                     if last_skill > 0 {
+//                         custom_id = get_new_id(last_skill);
+//                     }
+//                 }
+//             }
+//         }
+//     }
 
-    let expiry = if se_data.total_time > 0. && se_data.total_time < 604800. {
-        Some(
-            timestamp
-                + Duration::milliseconds((se_data.total_time as i64) * 1000 + TIMEOUT_DELAY_MS),
-        )
-    } else {
-        None
-    };
+//     let expiry = if se_data.total_time > 0. && se_data.total_time < 604800. {
+//         Some(
+//             timestamp
+//                 + Duration::milliseconds((se_data.total_time as i64) * 1000 + TIMEOUT_DELAY_MS),
+//         )
+//     } else {
+//         None
+//     };
 
-    StatusEffectDetails {
-        instance_id: se_data.effect_instance_id,
-        source_id,
-        target_id,
-        status_effect_id: se_data.status_effect_id,
-        custom_id,
-        target_type,
-        db_target_type,
-        value,
-        stack_count: se_data.stack_count,
-        buff_category,
-        category: status_effect_category,
-        status_effect_type,
-        show_type,
-        expiration_delay: se_data.total_time,
-        expire_at: expiry,
-        end_tick: se_data.end_tick,
-        name,
-        timestamp,
-    }
-}
+//     StatusEffectDetails {
+//         instance_id: se_data.effect_instance_id,
+//         source_id,
+//         target_id,
+//         status_effect_id: se_data.status_effect_id,
+//         custom_id,
+//         target_type,
+//         db_target_type,
+//         value,
+//         stack_count: se_data.stack_count,
+//         buff_category,
+//         category: status_effect_category,
+//         status_effect_type,
+//         show_type,
+//         expiration_delay: se_data.total_time,
+//         expire_at: expiry,
+//         end_tick: se_data.end_tick,
+//         name,
+//         timestamp,
+//     }
+// }
 
 pub fn get_status_effect_value(value: &Option<Vec<u8>>) -> u64 {
     value.as_ref().map_or(0, |v| {

@@ -138,8 +138,8 @@ async fn main() -> Result<()> {
                     meter_window.set_always_on_top(false).unwrap();
                 }
                 if settings.general.auto_iface {
-                    ip = meter_core::get_most_common_ip().unwrap();
-                    info!("auto_iface enabled, using ip: {}", ip);
+                    // ip = meter_core::get_most_common_ip().unwrap();
+                    info!("auto_iface enabled, using ip:");
                 } else {
                     ip = settings.general.ip;
                     let interface = settings.general.if_desc;
@@ -147,23 +147,23 @@ async fn main() -> Result<()> {
                         "manual interface set, ip: {} and interface: {}",
                         ip, interface
                     );
-                    let os_interfaces = get_network_interfaces();
-                    let right_name: Vec<&(String, String)> = os_interfaces
-                        .iter()
-                        .filter(|iface| iface.0 == interface)
-                        .collect();
-                    if !right_name.is_empty() {
-                        let perfect_match =
-                            right_name.clone().into_iter().find(|iface| iface.1 == ip);
-                        if perfect_match.is_none() {
-                            //in case of multiple interfaces with same name, try the first one
-                            ip = right_name[0].1.clone(); //get the up to date ip
-                            warn!("ip for manual interface was wrong, using ip: {}", ip);
-                        }
-                    } else {
-                        ip = meter_core::get_most_common_ip().unwrap();
-                        warn!("manually set interface not found, using default ip: {}", ip);
-                    }
+                    // let os_interfaces = get_network_interfaces();
+                    // let right_name: Vec<&(String, String)> = os_interfaces
+                    //     .iter()
+                    //     .filter(|iface| iface.0 == interface)
+                    //     .collect();
+                    // if !right_name.is_empty() {
+                    //     let perfect_match =
+                    //         right_name.clone().into_iter().find(|iface| iface.1 == ip);
+                    //     if perfect_match.is_none() {
+                    //         //in case of multiple interfaces with same name, try the first one
+                    //         ip = right_name[0].1.clone(); //get the up to date ip
+                    //         warn!("ip for manual interface was wrong, using ip: {}", ip);
+                    //     }
+                    // } else {
+                    //     // ip = meter_core::get_most_common_ip().unwrap();
+                    //     warn!("manually set interface not found, using default ip:");
+                    // }
                     if settings.general.port > 0 {
                         port = settings.general.port;
                         info!("using port: {}", port);
@@ -176,8 +176,8 @@ async fn main() -> Result<()> {
                     }
                 }
             } else {
-                ip = meter_core::get_most_common_ip().unwrap();
-                info!("settings not found, auto_iface enabled, using ip: {}", ip);
+                // ip = meter_core::get_most_common_ip().unwrap();
+                info!("settings not found, auto_iface enabled, using ip:");
                 meter_window.show().unwrap();
                 logs_window.show().unwrap();
             }
@@ -189,11 +189,11 @@ async fn main() -> Result<()> {
                 }
             }
 
-            task::spawn_blocking(move || {
-                parser::start(meter_window, ip, port, raw_socket, settings).map_err(|e| {
-                    error!("unexpected error occurred in parser: {}", e);
-                })
-            });
+            // task::spawn_blocking(move || {
+            //     parser::start(meter_window, ip, port, raw_socket, settings).map_err(|e| {
+            //         error!("unexpected error occurred in parser: {}", e);
+            //     })
+            // });
 
             // #[cfg(debug_assertions)]
             // {
@@ -329,7 +329,7 @@ async fn main() -> Result<()> {
             get_db_info,
             disable_blur,
             enable_blur,
-            get_network_interfaces,
+            // get_network_interfaces,
             write_log,
             toggle_encounter_favorite,
             delete_all_encounters,
@@ -1174,12 +1174,12 @@ fn get_settings(window: tauri::Window) -> Option<Settings> {
     read_settings(&path).ok()
 }
 
-#[tauri::command]
-fn get_network_interfaces() -> Vec<(String, String)> {
-    let interfaces = meter_core::get_network_interfaces();
-    info!("get_network_interfaces: {:?}", interfaces);
-    interfaces
-}
+// #[tauri::command]
+// fn get_network_interfaces() -> Vec<(String, String)> {
+//     let interfaces = meter_core::get_network_interfaces();
+//     info!("get_network_interfaces: {:?}", interfaces);
+//     interfaces
+// }
 
 #[tauri::command]
 fn open_folder(path: String) {
