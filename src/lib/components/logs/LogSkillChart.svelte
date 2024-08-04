@@ -172,7 +172,7 @@
                             >Ticks</td>
                         <td class="w-12 font-semibold" use:tooltip={{ content: "Hit modifiers, e.g. Crit, BA, FA" }}
                             >Mods</td>
-                        <td class="w-16 font-semibold" use:tooltip={{ content: "Hit damage" }}>DMG</td>
+                        <td class="w-18 font-semibold" use:tooltip={{ content: "Hit damage" }}>DMG</td>
                         <td class="w-full font-semibold">
                             <span use:tooltip={{ content: "Party Buffs" }}>
                                 <button
