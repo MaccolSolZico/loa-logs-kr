@@ -210,21 +210,21 @@
                 <tbody>
                     {#each skillCast.hits as hit, i (i)}
                         <tr>
-                            <td class="h-7 font-mono">#{i + 1}</td>
+                            <td class="h-7 font-gothic">#{i + 1}</td>
                             {#if i === 0}
-                                <td class="font-mono">
+                                <td class="font-gothic">
                                     <span use:tooltip={{ content: `${formatDurationFromMs(hit.timestamp)}s` }}>
                                         +{round((hit.timestamp - skillCast.timestamp) / 1000)}s
                                     </span>
                                 </td>
                             {:else}
-                                <td class="font-mono">
+                                <td class="font-gothic">
                                     <span use:tooltip={{ content: `${formatDurationFromMs(hit.timestamp)}s` }}>
                                         +{round((hit.timestamp - skillCast.hits[i - 1].timestamp) / 1000)}s
                                     </span>
                                 </td>
                             {/if}
-                            <td class="font-mono">
+                            <td class="font-gothic">
                                 {#if hit.crit}
                                     <span use:tooltip={{ content: "Critical Hit" }}>C</span>
                                 {/if}
@@ -238,7 +238,7 @@
                                     -
                                 {/if}
                             </td>
-                            <td class="font-mono">
+                            <td class="font-gothic">
                                 <span use:tooltip={{ content: hit.damage.toLocaleString() }}>
                                     {abbreviateNumber(hit.damage)}
                                 </span>

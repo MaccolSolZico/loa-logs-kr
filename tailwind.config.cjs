@@ -7,7 +7,7 @@ module.exports = {
         extend: {
             fontFamily: {
                 sans: ["Noto Sans KR Variable", ...defaultTheme.fontFamily.sans],
-                mono: ["JetBrains Mono Variable", ...defaultTheme.fontFamily.mono]
+                gothic: ["Nanum Gothic Coding", ...defaultTheme.fontFamily.sans]
             },
             fontSize: {
                 xxs: "0.938rem", // 15px
